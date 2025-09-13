@@ -2,6 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\DownloadLogController;
+
 Route::get('/', function () {
     return view('invite');
 });
+
+Route::post('/log-download', [DownloadLogController::class, 'logDownload']);

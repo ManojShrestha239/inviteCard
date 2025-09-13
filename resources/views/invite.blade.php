@@ -10,6 +10,7 @@
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
     <!-- Styles / Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body {
             min-height: 100vh;
@@ -145,14 +146,14 @@
 <body>
     <div class="container">
         <div class="form-section">
-            <h2>Invite Card Details</h2>
+            <h2>Invitee Card Details</h2>
             <form id="inviteForm" autocomplete="off" onsubmit="event.preventDefault();">
                 <div class="form-group">
                     <label for="name">Name</label>
                     <input type="text" id="name" name="name" placeholder="Enter name" required />
                 </div>
                 <button type="button" id="downloadBtn"
-                    style="margin-left:1rem;background:#43e97b;background:linear-gradient(90deg,#38f9d7 0%,#43e97b 100%);">Download
+                    style="margin-left:1rem;background:#43e97b;background:linear-gradient(90deg,#38f9d7 0%,#43e97b 100%);color:#000;">Download
                     Image</button>
             </form>
         </div>
@@ -163,7 +164,7 @@
                     style="width: 100%; height: 100%; border-radius: 18px; display: block;" />
                 <div id="previewName"
                     style="position: absolute; top: 107px; left: 50%; transform: translateX(-50%); height: 42px; width: 280px; min-width: 280px; max-width: 280px; min-height: 42px; max-height: 42px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 1.5rem; font-weight: 700; color: red; letter-spacing: 1px; background: rgba(255,255,255,0.85); border-radius: 1px; overflow: hidden;">
-                    Your Name</div>
+                    Invitee Name</div>
             </div>
         </div>
     </div>
@@ -174,10 +175,23 @@
         const downloadBtn = document.getElementById('downloadBtn');
         const cardPreview = document.getElementById('cardPreview');
 
+        function updateDownloadBtnState() {
+            const value = nameInput.value;
+            if (!value || value.trim() === "") {
+                downloadBtn.disabled = true;
+                downloadBtn.style.opacity = 0.6;
+                downloadBtn.style.cursor = 'not-allowed';
+            } else {
+                downloadBtn.disabled = false;
+                downloadBtn.style.opacity = 1;
+                downloadBtn.style.cursor = 'pointer';
+            }
+        }
+
         function updatePreview() {
-            const text = nameInput.value || 'Your Name';
+            const value = nameInput.value;
+            const text = (!value || value.trim() === "") ? 'Your Name' : value;
             previewName.textContent = text;
-            // Keep previewName size fixed
             previewName.style.width = '280px';
             previewName.style.height = '42px';
             previewName.style.minWidth = '280px';
@@ -199,6 +213,7 @@
                 fontSize -= 0.05;
                 previewName.style.fontSize = fontSize + 'rem';
             }
+            updateDownloadBtnState();
         }
         nameInput.addEventListener('input', updatePreview);
         window.addEventListener('resize', updatePreview);
@@ -206,6 +221,9 @@
             e.preventDefault();
             updatePreview();
         });
+
+        // Initial state
+        updateDownloadBtnState();
 
         downloadBtn.addEventListener('click', function() {
             updatePreview();
@@ -230,6 +248,16 @@
                 link.download = 'invite-card.png';
                 link.href = canvas.toDataURL('image/png');
                 link.click();
+                // Log download count
+                fetch('/log-download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                            .getAttribute('content')
+                    },
+                    body: JSON.stringify({})
+                });
             });
         });
     </script>
