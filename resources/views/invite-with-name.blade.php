@@ -160,7 +160,7 @@
         <div class="preview-section">
             <div class="card-preview" id="cardPreview"
                 style="position: relative; background: none; box-shadow: none; width: 400px; height: 450px; padding: 0;">
-                <img src="{{ asset('image/Salesberry-invitation-card.jpg') }}" alt="Invite Card"
+                <img src="{{ asset('image/Salesberry-invitation-card-with-name.jpg') }}" alt="Invite Card"
                     style="width: 100%; height: 100%; border-radius: 18px; display: block;" />
                 <div id="previewName">
                     Invitee Name</div>
@@ -266,7 +266,7 @@
                 setTimeout(() => {
                     const downloadDataUrl = (dataUrl) => {
                         const link = document.createElement('a');
-                        link.download = 'invite-card.png';
+                        link.download = 'invite-card-with-name.png';
                         link.href = dataUrl;
                         link.click();
                         // Log download count

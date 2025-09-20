@@ -10,6 +10,7 @@
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
     <!-- Styles / Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <meta name="csrf-token" content="{{ csrf_token() }}">
     <style>
         body {
             min-height: 100vh;
@@ -145,13 +146,15 @@
 <body>
     <div class="container">
         <div class="form-section">
-            <h2>Invite Card Details</h2>
+            <h2>Invitee Card Details</h2>
             <form id="inviteForm" autocomplete="off" onsubmit="event.preventDefault();">
                 <div class="form-group">
                     <label for="name">Name</label>
                     <input type="text" id="name" name="name" placeholder="Enter name" required />
                 </div>
-                <button type="submit">Preview</button>
+                <button type="button" id="downloadBtn"
+                    style="margin-left:1rem;background:#43e97b;background:linear-gradient(90deg,#38f9d7 0%,#43e97b 100%);color:#000;">Download
+                    Image</button>
             </form>
         </div>
         <div class="preview-section">
@@ -160,35 +163,102 @@
                 <img src="{{ asset('image/Salesberry-invitation-card-no-date.jpg') }}" alt="Invite Card"
                     style="width: 100%; height: 100%; border-radius: 18px; display: block;" />
                 <div id="previewName"
-                    style="position: absolute; top: 107px; left: 50%; transform: translateX(-50%); height: 41px; width: 70%; text-align: center; font-size: 1.5rem; font-weight: 700; color: #1b3c1b; letter-spacing: 1px; background: rgba(255,255,255,0.85); border-radius: 1px; padding: 0.5rem 0;">
-                    Your Name</div>
+                    style="position: absolute; top: 107px; left: 50%; transform: translateX(-50%); height: 42px; width: 280px; min-width: 280px; max-width: 280px; min-height: 42px; max-height: 42px; display: flex; align-items: center; justify-content: center; text-align: center; font-size: 1.5rem; font-weight: 700; color: red; letter-spacing: 1px; background: rgba(255,255,255,0.85); border-radius: 1px; overflow: hidden;">
+                    Invitee Name</div>
             </div>
         </div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script>
         const nameInput = document.getElementById('name');
         const previewName = document.getElementById('previewName');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const cardPreview = document.getElementById('cardPreview');
+
+        function updateDownloadBtnState() {
+            const value = nameInput.value;
+            if (!value || value.trim() === "") {
+                downloadBtn.disabled = true;
+                downloadBtn.style.opacity = 0.6;
+                downloadBtn.style.cursor = 'not-allowed';
+            } else {
+                downloadBtn.disabled = false;
+                downloadBtn.style.opacity = 1;
+                downloadBtn.style.cursor = 'pointer';
+            }
+        }
 
         function updatePreview() {
-            const text = nameInput.value || 'Your Name';
+            const value = nameInput.value;
+            const text = (!value || value.trim() === "") ? 'Your Name' : value;
             previewName.textContent = text;
-            // Dynamic font size logic
-            let fontSize = 1.5; // rem
+            previewName.style.width = '280px';
+            previewName.style.height = '42px';
+            previewName.style.minWidth = '280px';
+            previewName.style.maxWidth = '280px';
+            previewName.style.minHeight = '42px';
+            previewName.style.maxHeight = '42px';
+            previewName.style.display = 'block';
+            previewName.style.lineHeight = '42px';
+            previewName.style.textAlign = 'center';
+            previewName.style.verticalAlign = 'middle';
+            previewName.style.borderRadius = '1px';
+            let fontSize = 1.5;
             previewName.style.fontSize = fontSize + 'rem';
             previewName.style.whiteSpace = 'nowrap';
             previewName.style.overflow = 'hidden';
             previewName.style.textOverflow = 'ellipsis';
-            // Reduce font size until it fits in one line or minimum font size reached
             const maxWidth = previewName.offsetWidth;
             while (previewName.scrollWidth > maxWidth && fontSize > 0.7) {
                 fontSize -= 0.05;
                 previewName.style.fontSize = fontSize + 'rem';
             }
+            updateDownloadBtnState();
         }
         nameInput.addEventListener('input', updatePreview);
+        window.addEventListener('resize', updatePreview);
         document.getElementById('inviteForm').addEventListener('submit', function(e) {
             e.preventDefault();
             updatePreview();
+        });
+
+        // Initial state
+        updateDownloadBtnState();
+
+        downloadBtn.addEventListener('click', function() {
+            updatePreview();
+            const img = cardPreview.querySelector('img');
+            const oldRadius = img.style.borderRadius;
+            img.style.borderRadius = '0';
+            const oldWidth = cardPreview.style.width;
+            const oldHeight = cardPreview.style.height;
+            cardPreview.style.width = '400px';
+            cardPreview.style.height = '450px';
+            html2canvas(cardPreview, {
+                backgroundColor: null,
+                useCORS: true,
+                scale: 2,
+                width: 400,
+                height: 450
+            }).then(function(canvas) {
+                img.style.borderRadius = oldRadius;
+                cardPreview.style.width = oldWidth;
+                cardPreview.style.height = oldHeight;
+                const link = document.createElement('a');
+                link.download = 'invite-card.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                // Log download count
+                fetch('/log-download', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')
+                            .getAttribute('content')
+                    },
+                    body: JSON.stringify({})
+                });
+            });
         });
     </script>
 </body>
