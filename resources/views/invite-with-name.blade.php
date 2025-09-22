@@ -6,8 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{{ config('app.name', 'Laravel') }}</title>
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.bunny.net">
+    <link rel="preconnect" href="https://fonts.bunny.net" crossorigin>
     <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
+    <!-- Preload base image to ensure it's ready before capture -->
+    <link rel="preload" as="image" href="{{ asset('image/Salesberry-invitation-card.jpg') }}">
     <!-- Styles / Scripts -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -161,6 +163,7 @@
             <div class="card-preview" id="cardPreview"
                 style="position: relative; background: none; box-shadow: none; width: 400px; height: 450px; padding: 0;">
                 <img src="{{ asset('image/Salesberry-invitation-card-with-name.jpg') }}" alt="Invite Card"
+                    loading="eager" decoding="sync" fetchpriority="high"
                     style="width: 100%; height: 100%; border-radius: 18px; display: block;" />
                 <div id="previewName">
                     Invitee Name</div>
@@ -198,6 +201,8 @@
         const previewName = document.getElementById('previewName');
         const downloadBtn = document.getElementById('downloadBtn');
         const cardPreview = document.getElementById('cardPreview');
+        // Use the device pixel ratio for crisp renders on high-DPI displays
+        const DPR = window.devicePixelRatio || 1;
 
         function updateDownloadBtnState() {
             const value = nameInput.value;
@@ -250,6 +255,21 @@
         updateDownloadBtnState();
         updatePreview();
 
+        // Utility: wait for base image to be fully loaded
+        function waitForImage(img) {
+            return new Promise((resolve) => {
+                if (!img) return resolve();
+                if (img.complete && img.naturalWidth > 0) return resolve();
+                const done = () => resolve();
+                img.addEventListener('load', done, {
+                    once: true
+                });
+                img.addEventListener('error', done, {
+                    once: true
+                });
+            });
+        }
+
         downloadBtn.addEventListener('click', function() {
             // Ensure preview is up to date
             updatePreview();
@@ -260,13 +280,14 @@
                 previewName.style[style] = nameStyle[style];
             }
 
-            // Wait for fonts to load before capturing
-            document.fonts.ready.then(() => {
+            // Wait for fonts and base image to load before capturing
+            const baseImg = cardPreview.querySelector('img');
+            Promise.all([document.fonts.ready, waitForImage(baseImg)]).then(() => {
                 // Small delay to ensure rendering is complete
                 setTimeout(() => {
                     const downloadDataUrl = (dataUrl) => {
                         const link = document.createElement('a');
-                        link.download = 'invite-card-with-name.png';
+                        link.download = 'invite-card.png';
                         link.href = dataUrl;
                         link.click();
                         // Log download count
@@ -286,7 +307,7 @@
                     if (window.htmlToImage && typeof window.htmlToImage.toPng === 'function') {
                         window.htmlToImage.toPng(cardPreview, {
                                 backgroundColor: null,
-                                pixelRatio: 2,
+                                pixelRatio: DPR,
                                 cacheBust: true,
                                 width: 400,
                                 height: 450,
@@ -310,7 +331,7 @@
                                 return html2canvas(cardPreview, {
                                         backgroundColor: null,
                                         useCORS: true,
-                                        scale: 2,
+                                        scale: DPR,
                                         logging: false,
                                         allowTaint: true,
                                         onclone: (clonedDoc) => {
@@ -337,7 +358,7 @@
                         html2canvas(cardPreview, {
                                 backgroundColor: null,
                                 useCORS: true,
-                                scale: 2,
+                                scale: DPR,
                                 logging: false,
                                 allowTaint: true,
                                 onclone: (clonedDoc) => {
